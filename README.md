@@ -4,7 +4,7 @@ This repository contains a Python script for analyzing the diffusion properties 
 
 ## Features
 
-- **Diffusivity Calculation**: Computes the diffusivity of ions from molecular dynamics trajectories using the `DiffusionAnalyzer` from `pymatgen`.
+- **Diffusivity Calculation**: Computes the diffusivity of ions from molecular dynamics trajectories using the `DiffusionAnalyzer` from `pymatgen`. Script accepts .extxyz files by default but can be modified for other formats if they are recognized by `pymatgen` and `ase`.
 - **Ionic Conductivity Calculation**: Calculates the ionic conductivity from the diffusivity data.
 - **Probability Density Analysis**: Analyzes the probability density of ion positions over time to visualize ion pathways.
 - **Van Hove Function Analysis**: Computes and plots the self-part and distinct-part of the van Hove correlation function.
@@ -33,6 +33,19 @@ This repository contains a Python script for analyzing the diffusion properties 
    pip install pymatgen
    pip install ase
    etc.
-2. **Run the script**:
+## Usage
+1. **Run the script**:
    ```bash
    python conductivity.py
+## Outputs
+
+- **Text File**: `output.txt` containing the extrapolated diffusivity and conductivity, diffusion summary, and Arrhenius values.
+- **CSV Files**: MSD data files for each temperature.
+- **Plots**:
+  - `diffusivity_plot_analyzer.png`
+  - `conductivity_plot_analyzer.png`
+  - MSD plots for each temperature (e.g., `msd_plot_800K.png`)
+  - Arrhenius plot (`arrhenius_plot.png`)
+  - Van Hove function plots for each temperature (e.g., `van_hove_self_800K.png`, `van_hove_distinct_800K.png`, `van_hove_3d_self_800K.png`, `van_hove_3d_distinct_800K.png`)
+- **Probability Density Analysis Output Files**: (e.g., `CHGCAR_800K.vasp`)
+   
