@@ -2,7 +2,7 @@
 #SBATCH --account=rrg-ovoznyy
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=40
-#SBATCH --time=0-01:00
+#SBATCH --time=0-02:00
 #SBATCH --job-name=conductivity
 #SBATCH --output=__%j__.sto
 #SBATCH --error=__%j__.err

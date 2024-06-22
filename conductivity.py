@@ -73,7 +73,6 @@ diffusivities = []
 msd_diffusivities = []
 conductivities_manual = []
 conductivities_analyzer = []
-conductivities_analyzer_S = [value / 1000 for value in conductivities_analyzer]
 conversion_factors = []
 summaries = []
 
@@ -105,6 +104,8 @@ for i in range(len(files)):
 
     conductivity_analyzer = analyzer.conductivity
     conductivities_analyzer.append(conductivity_analyzer)
+
+    conductivities_analyzer_S = [value / 1000 for value in conductivities_analyzer]
 
     # Calculate conductivity manually using analyzer's diffusivity
     structure = analyzer.structure
@@ -162,6 +163,7 @@ with open(output_file, "w") as f:
     if extrapolated_diffusivity and extrapolated_conductivity:
         f.write(f"Extrapolated Diffusivity at 300K: {extrapolated_diffusivity:.3e} cm^2/s\n")
         f.write(f"Extrapolated Conductivity at 300K: {extrapolated_conductivity/1000:.3e} S/cm\n")
+        f.write(f"Extrapolated Conductivity at 300K: {extrapolated_conductivity:.3e} mS/cm\n")
     else:
         f.write("\nOnly one file provided, extrapolated diffusivity and conductivity not calculated.\n")
 
@@ -204,7 +206,15 @@ plt.plot(temperatures, conductivities_analyzer_S, 'o-')
 plt.xlabel('Temperature (K)')
 plt.ylabel('Conductivity (S/cm)')
 plt.title('Conductivity vs Temperature')
+
+# Set the y-axis to exponential format
+ax = plt.gca()
+ax.yaxis.set_major_formatter(ticker.ScalarFormatter(useMathText=True))
+ax.yaxis.get_major_formatter().set_scientific(True)
+ax.yaxis.get_major_formatter().set_powerlimits((0, 0))
+
 plt.savefig(os.path.join(output_dir, 'conductivity_plot_analyzer.png'))
+plt.show()
 
 # Plot MSD from CSV files and calculate diffusivity from MSD
 for temp in temperatures:
@@ -228,11 +238,11 @@ for temp in temperatures:
                 mscd.append(float(row[5]))
 
         plt.figure()
-        plt.plot(time, msd, label='MSD', linewidth=0.3)  # Thinner lines
-        plt.plot(time, msd_a, label='MSD_a', linewidth=0.3)  # Thinner lines
-        plt.plot(time, msd_b, label='MSD_b', linewidth=0.3)  # Thinner lines
-        plt.plot(time, msd_c, label='MSD_c', linewidth=0.3)  # Thinner lines
-        plt.plot(time, mscd, label='MSCD', linewidth=0.3)  # Thinner lines
+        plt.plot(time, msd, label='MSD', linewidth=0.2)
+        plt.plot(time, msd_a, label='MSD_a', linewidth=0.2)
+        plt.plot(time, msd_b, label='MSD_b', linewidth=0.2)
+        plt.plot(time, msd_c, label='MSD_c', linewidth=0.2)
+        plt.plot(time, mscd, label='MSCD', linewidth=0.2)
         plt.xlabel('Time (ps)')
         plt.ylabel('MSD (Å^2)')
         plt.title(f'MSD vs Time at {temp}K')
@@ -265,8 +275,7 @@ with open(output_file, "a") as f:
         f.write("Standard Error: Not available\n")
 
 
-# Function to create an Arrhenius plot
-def plot_arrhenius(temperatures, diffusivities, output_dir):
+def plot_arrhenius(temperatures, diffusivities, output_dir, extrapolated_conductivity, extrapolated_diffusivity):
     inv_T_p = 1000 / np.array(temperatures)  # 1/T in 1/K
     ln_D_p = np.log(diffusivities)
     slope_p, intercept_p, r_value_p, p_value_p, std_err_p = stats.linregress(inv_T_p, ln_D_p)
@@ -283,11 +292,21 @@ def plot_arrhenius(temperatures, diffusivities, output_dir):
     ax1.set_title('Arrhenius Plot')
     ax1.legend()
 
+    # Extrapolate to 300 K
+    T_extrapolated = np.array([300])
+    inv_T_extrapolated = 1000 / T_extrapolated
+    ln_D_extrapolated = slope_p * inv_T_extrapolated + intercept_p
 
-    # Adding text to the plot with adjusted positions
-    ax1.text(0.003, -22, f'Extrapolated Conductivity: {extrapolated_conductivity / 1000:.3e} S/cm', fontsize=12,
-             color='red')
-    ax1.text(0.003, -24, f'Extrapolated Diffusivity: {extrapolated_diffusivity:.3e} cm^2/s', fontsize=12, color='blue')
+    # Plot extrapolated data
+    ax1.plot(inv_T_extrapolated, ln_D_extrapolated, 'rx', label='Extrapolated Data')
+
+    # Adding annotations for extrapolated conductivity and diffusivity
+    ax1.annotate(f'Extrapolated Conductivity: {extrapolated_conductivity / 1000:.3e} S/cm',
+                 xy=(inv_T_extrapolated, ln_D_extrapolated), xytext=(inv_T_extrapolated + 0.5, ln_D_extrapolated - 2),
+                 arrowprops=dict(facecolor='red', shrink=0.05), fontsize=12, color='red')
+    ax1.annotate(f'Extrapolated Diffusivity: {extrapolated_diffusivity:.3e} cm^2/s',
+                 xy=(inv_T_extrapolated, ln_D_extrapolated), xytext=(inv_T_extrapolated + 0.5, ln_D_extrapolated - 4),
+                 arrowprops=dict(facecolor='blue', shrink=0.05), fontsize=12, color='blue')
 
     # Secondary axis (top) showing Temperature in K
     def inv_T_to_T(inv_T):
@@ -298,25 +317,33 @@ def plot_arrhenius(temperatures, diffusivities, output_dir):
 
     ax2 = ax1.secondary_xaxis('top', functions=(inv_T_to_T, T_to_inv_T))
     ax2.set_xlabel('Temperature (K)')
+    ax2.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 
     plt.savefig(os.path.join(output_dir, 'arrhenius_plot.png'))
     plt.show()
 
     return Ea_p, c_p, std_err_p
 
-
 # Plot Arrhenius
-Ea_p, c_p, std_err_p = plot_arrhenius(temperatures, diffusivities, output_dir)
+Ea_p, c_p, std_err_p = plot_arrhenius(temperatures, diffusivities, output_dir, extrapolated_conductivity, extrapolated_diffusivity)
 
 
 # Function to write final summary table to output file
-def write_table_to_output(file_path, temperatures, diffusivities, msd_diffusivities, conductivities_analyzer_S, conductivities_manual, conversion_factors):
+def write_table_to_output(file_path, temperatures, diffusivities, msd_diffusivities, conductivities_analyzer,
+                          conductivities_analyzer_S, conductivities_manual, conversion_factors):
+    # Format conductivities_analyzer to scientific notation (mS/cm)
+    conductivities_analyzer_exp = [f"{value:.3e}" for value in conductivities_analyzer]
+
+    # Format conductivities_analyzer_S to scientific notation (S/cm)
+    conductivities_analyzer_S_exp = [f"{value:.3e}" for value in conductivities_analyzer_S]
+
     with open(file_path, "a") as f:
         f.write("\n\nSummary Table:\n")
         headers = ["Property"] + [f"{temp}K" for temp in temperatures]
         rows = [
             ["diffusivities_analyzer (cm^2/s)"] + diffusivities,
-            ["conductivities_analyzer (S/cm)"] + conductivities_analyzer_S,
+            ["conductivities_analyzer (mS/cm)"] + conductivities_analyzer_exp,
+            ["conductivities_analyzer (S/cm)"] + conductivities_analyzer_S_exp,
             ["msd_diffusivities (cm^2/s)"] + msd_diffusivities,
             ["conductivities_manual"] + conductivities_manual,
             ["conversion_factors"] + conversion_factors
@@ -326,7 +353,9 @@ def write_table_to_output(file_path, temperatures, diffusivities, msd_diffusivit
         f.write(table + "\n")
 
 
-write_table_to_output(output_file, temperatures, diffusivities, msd_diffusivities, conductivities_analyzer_S, conductivities_manual, conversion_factors)
+# Assuming the required values and variables are defined properly:
+write_table_to_output(output_file, temperatures, diffusivities, msd_diffusivities, conductivities_analyzer,
+                      conductivities_analyzer_S, conductivities_manual, conversion_factors)
 
 print(f"Results written to {output_file}")
 
