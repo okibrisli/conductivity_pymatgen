@@ -17,6 +17,7 @@ This repository contains a Python script for analyzing the diffusion properties 
 - Python 3.7 or later
 - `matplotlib`
 - `pymatgen`
+- `pymatgen-analysis-diffusion`
 - `ase`
 - `numpy`
 - `scipy`
