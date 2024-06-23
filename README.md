@@ -7,6 +7,8 @@ https://materialsvirtuallab.github.io/pymatgen-analysis-diffusion/pymatgen.analy
 https://github.com/materialsvirtuallab/pymatgen-analysis-diffusion
 
 https://github.com/materialsvirtuallab
+
+https://github.com/materialsproject/pymatgen
 ## Features
 
 - **Diffusivity Calculation**: Computes the diffusivity of ions from molecular dynamics trajectories using the `DiffusionAnalyzer` from `pymatgen`. 
