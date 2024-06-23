@@ -192,9 +192,6 @@ with open(output_file, "w") as f:
 
     f.write(f"{files}")
 
-
-print(f"Results written to {output_file}")
-
 # Plot Diffusivity
 plt.figure()
 plt.plot(temperatures, diffusivities, 'o-', label='Analyzer Diffusivity')
