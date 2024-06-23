@@ -1,7 +1,12 @@
 # Ionic Conductivity and Diffusion Analysis
 
-This repository contains a Python script for analyzing the diffusion properties and ionic conductivity of materials using molecular dynamics simulation data. The script utilizes the `pymatgen` library to perform various analyses, including diffusivity calculations and probability density analysis. Additionally, it generates plots and summary tables to visualize and document the results. Script accepts .extxyz files by default but can be modified for other formats if they are recognized by `pymatgen` and `ase`.
+This repository contains a Python script for analyzing the diffusion properties and ionic conductivity of materials using molecular dynamics simulation data. The script utilizes the `pymatgen` library to perform various analyses, including diffusivity calculations and probability density analysis. Additionally, it generates plots and summary tables to visualize and document the results. Script accepts .extxyz files by default but can be modified for other formats if they are recognized by `pymatgen` and `ase`. Please refer to the links below for further information about calculations:
 
+https://materialsvirtuallab.github.io/pymatgen-analysis-diffusion/pymatgen.analysis.diffusion.analyzer.html#pymatgen.analysis.diffusion.analyzer.DiffusionAnalyzer
+
+https://github.com/materialsvirtuallab/pymatgen-analysis-diffusion
+
+https://github.com/materialsvirtuallab
 ## Features
 
 - **Diffusivity Calculation**: Computes the diffusivity of ions from molecular dynamics trajectories using the `DiffusionAnalyzer` from `pymatgen`. 
