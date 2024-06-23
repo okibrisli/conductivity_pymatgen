@@ -81,4 +81,5 @@ https://github.com/materialsproject/pymatgen
   - MSD plots for each temperature (e.g., `msd_plot_800K.png`)
   - Arrhenius plot (`arrhenius_plot.png`)
 - **Probability Density Analysis Output Files**: (e.g., `CHGCAR_800K.vasp`)
+- **Example output files can be find in the example_output folder**
    
