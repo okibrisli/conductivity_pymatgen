@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from pymatgen.analysis.diffusion.analyzer import DiffusionAnalyzer, get_extrapolated_conductivity, \
-    get_extrapolated_diffusivity, get_conversion_factor, fit_arrhenius
+    get_extrapolated_diffusivity, get_conversion_factor, fit_arrhenius, get_arrhenius_plot
 from pymatgen.analysis.diffusion.aimd.pathway import ProbabilityDensityAnalysis
 from pymatgen.analysis.diffusion.aimd.van_hove import VanHoveAnalysis
 from pymatgen.io.ase import AseAtomsAdaptor
@@ -112,12 +112,15 @@ for i in range(len(files)):
     num_ions = sum([site.species[diffusing_species] for site in structure if diffusing_species in site.species])
     volume = structure.volume
     N = num_ions / volume  # Number of ions per unit volume
-    conductivity_manual = (diffusivity_analyzer * e ** 2 * N) / (k_B * analyzer.temperature)
+    conductivity_manual = 10e24 * (diffusivity_analyzer * e ** 2 * N) / (k_B * analyzer.temperature)
     conductivities_manual.append(conductivity_manual)
 
     # Export MSD data to CSV
     msd_filename = os.path.join(output_dir, f"msd_data_{temperatures[i]}K.csv")
     analyzer.export_msdt(msd_filename)
+
+    """    msd_plot_filename = os.path.join(output_dir, f"msd_plot_analyzer_{temperatures[i]}K.png")
+    analyzer.get_msd_plot(msd_plot_filename)"""
 
     conversion_factor = get_conversion_factor(structure, diffusing_species, temperatures[i])
     conversion_factors.append(conversion_factor)
@@ -144,6 +147,9 @@ for i in range(len(files)):
 
 # Calculate Arrhenius values using all temperatures and diffusivities
 arrhenius_values = fit_arrhenius(temperatures, diffusivities)
+
+"""arr_plot = get_arrhenius_plot(temperatures, diffusivities)
+plt.show()"""
 
 # Calculate extrapolated diffusivity and conductivity
 if len(files) > 1:
@@ -173,6 +179,8 @@ with open(output_file, "w") as f:
         for temp, summary in zip(temperatures, summaries):
             f.write(f"  {temp}K: {summary[key]}\n")
 
+    f.write(f"avg_nsteps = {avg_nsteps}")
+
     # Arrhenius values
     f.write("\n\nArrhenius Values from Analyzer:\n")
     f.write(f"Activation Energy: {arrhenius_values[0]:.3e} eV\n")
@@ -181,6 +189,8 @@ with open(output_file, "w") as f:
         f.write(f"Standard Error: {arrhenius_values[2]:.3e} eV\n")
     else:
         f.write("Standard Error: Not available\n")
+
+    f.write(f"{files}")
 
 
 print(f"Results written to {output_file}")
@@ -275,7 +285,8 @@ with open(output_file, "a") as f:
         f.write("Standard Error: Not available\n")
 
 
-def plot_arrhenius(temperatures, diffusivities, output_dir, extrapolated_conductivity, extrapolated_diffusivity):
+# Function to create an Arrhenius plot
+def plot_arrhenius(temperatures, diffusivities, output_dir):
     inv_T_p = 1000 / np.array(temperatures)  # 1/T in 1/K
     ln_D_p = np.log(diffusivities)
     slope_p, intercept_p, r_value_p, p_value_p, std_err_p = stats.linregress(inv_T_p, ln_D_p)
@@ -286,11 +297,19 @@ def plot_arrhenius(temperatures, diffusivities, output_dir, extrapolated_conduct
 
     # Primary axis (bottom) showing 1000/T
     ax1.plot(inv_T_p, ln_D_p, 'o', label='Data')
-    ax1.plot(inv_T_p, slope_p * inv_T_p + intercept_p, '-', label=f'Fit: Ea={Ea_p:.3e} eV')
+    ax1.plot(inv_T_p, slope_p * inv_T_p + intercept_p, '-', label=f'Fit')
     ax1.set_xlabel('1000/T (1/K)')
     ax1.set_ylabel('ln(Diffusivity) (ln(cm^2/s))')
     ax1.set_title('Arrhenius Plot')
     ax1.legend()
+
+    # Define the range for extrapolation including 300 K
+    temperatures_with_300K = np.append(temperatures, 300)
+    inv_T_extrapolated_range = 1000 / np.array(temperatures_with_300K)
+    ln_D_extrapolated_range = slope_p * inv_T_extrapolated_range + intercept_p
+
+    # Plot extrapolated line
+    ax1.plot(inv_T_extrapolated_range, ln_D_extrapolated_range, 'r--', color='red')
 
     # Extrapolate to 300 K
     T_extrapolated = np.array([300])
@@ -298,15 +317,12 @@ def plot_arrhenius(temperatures, diffusivities, output_dir, extrapolated_conduct
     ln_D_extrapolated = slope_p * inv_T_extrapolated + intercept_p
 
     # Plot extrapolated data
-    ax1.plot(inv_T_extrapolated, ln_D_extrapolated, 'rx', label='Extrapolated Data')
+    ax1.plot(inv_T_extrapolated, ln_D_extrapolated, 'rx', color='blue')
 
-    # Adding annotations for extrapolated conductivity and diffusivity
-    ax1.annotate(f'Extrapolated Conductivity: {extrapolated_conductivity / 1000:.3e} S/cm',
-                 xy=(inv_T_extrapolated, ln_D_extrapolated), xytext=(inv_T_extrapolated + 0.5, ln_D_extrapolated - 2),
-                 arrowprops=dict(facecolor='red', shrink=0.05), fontsize=12, color='red')
-    ax1.annotate(f'Extrapolated Diffusivity: {extrapolated_diffusivity:.3e} cm^2/s',
-                 xy=(inv_T_extrapolated, ln_D_extrapolated), xytext=(inv_T_extrapolated + 0.5, ln_D_extrapolated - 4),
-                 arrowprops=dict(facecolor='blue', shrink=0.05), fontsize=12, color='blue')
+    # Adding annotations for extrapolated conductivity and diffusivity in the bottom left corner
+    ax1.annotate(
+        f'Conductivity 300K: {extrapolated_conductivity / 1000:.3e} S/cm\nDiffusivity 300K: {extrapolated_diffusivity:.3e} cm^2/s\nEa={Ea_p:.3e} eV\nln(Diff) 300K: {np.log(extrapolated_diffusivity):.3f} cm^2/s',
+        xy=(0.05, 0.05), xycoords='axes fraction', fontsize=10, color='black', ha='left')
 
     # Secondary axis (top) showing Temperature in K
     def inv_T_to_T(inv_T):
@@ -318,32 +334,28 @@ def plot_arrhenius(temperatures, diffusivities, output_dir, extrapolated_conduct
     ax2 = ax1.secondary_xaxis('top', functions=(inv_T_to_T, T_to_inv_T))
     ax2.set_xlabel('Temperature (K)')
     ax2.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    ax2.xaxis.set_tick_params(rotation=90, labelsize=8)
 
     plt.savefig(os.path.join(output_dir, 'arrhenius_plot.png'))
     plt.show()
 
     return Ea_p, c_p, std_err_p
 
+
 # Plot Arrhenius
-Ea_p, c_p, std_err_p = plot_arrhenius(temperatures, diffusivities, output_dir, extrapolated_conductivity, extrapolated_diffusivity)
+Ea_p, c_p, std_err_p = plot_arrhenius(temperatures, diffusivities, output_dir)
 
 
 # Function to write final summary table to output file
-def write_table_to_output(file_path, temperatures, diffusivities, msd_diffusivities, conductivities_analyzer,
-                          conductivities_analyzer_S, conductivities_manual, conversion_factors):
-    # Format conductivities_analyzer to scientific notation (mS/cm)
-    conductivities_analyzer_exp = [f"{value:.3e}" for value in conductivities_analyzer]
-
-    # Format conductivities_analyzer_S to scientific notation (S/cm)
-    conductivities_analyzer_S_exp = [f"{value:.3e}" for value in conductivities_analyzer_S]
+def write_table_to_output(file_path, temperatures, diffusivities, msd_diffusivities, conductivities_analyzer_S, conductivities_manual, conversion_factors):
 
     with open(file_path, "a") as f:
         f.write("\n\nSummary Table:\n")
         headers = ["Property"] + [f"{temp}K" for temp in temperatures]
         rows = [
             ["diffusivities_analyzer (cm^2/s)"] + diffusivities,
-            ["conductivities_analyzer (mS/cm)"] + conductivities_analyzer_exp,
-            ["conductivities_analyzer (S/cm)"] + conductivities_analyzer_S_exp,
+            ["conductivities_analyzer (S/cm)"] + conductivities_analyzer_S,
+            ["conductivities_analyzer (mS/cm)"] + conductivities_analyzer,
             ["msd_diffusivities (cm^2/s)"] + msd_diffusivities,
             ["conductivities_manual"] + conductivities_manual,
             ["conversion_factors"] + conversion_factors
@@ -354,10 +366,8 @@ def write_table_to_output(file_path, temperatures, diffusivities, msd_diffusivit
 
 
 # Assuming the required values and variables are defined properly:
-write_table_to_output(output_file, temperatures, diffusivities, msd_diffusivities, conductivities_analyzer,
-                      conductivities_analyzer_S, conductivities_manual, conversion_factors)
+write_table_to_output(output_file, temperatures, diffusivities, msd_diffusivities, conductivities_analyzer_S, conductivities_manual, conversion_factors)
 
-print(f"Results written to {output_file}")
 
 # Perform Probability Density Analysis for each temperature
 for i, analyzer in enumerate(diff_analyzer):
@@ -366,36 +376,4 @@ for i, analyzer in enumerate(diff_analyzer):
     pda = ProbabilityDensityAnalysis(structure, trajectories, species="Li")
     output_filename = os.path.join(output_dir, f"CHGCAR_{temperatures[i]}K.vasp")
     pda.to_chgcar(output_filename)
-    print(f"Probability Density Analysis for {temperatures[i]}K written to {output_filename}")
-
-# Perform Van Hove Analysis for each temperature
-for i, analyzer in enumerate(diff_analyzer):
-    van_hove = VanHoveAnalysis(analyzer, avg_nsteps=avg_nsteps, step_skip=step_skip, species=['Li'])
-
-    # Save 1D plot of the distinct part of the van Hove function
-    vh_1d_distinct_plot_file = os.path.join(output_dir, f"van_hove_distinct_{temperatures[i]}K.png")
-    van_hove.get_1d_plot(mode='distinct', times=[0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0])
-    plt.savefig(vh_1d_distinct_plot_file)
-    plt.close()
-    print(f"Van Hove distinct plot for {temperatures[i]}K saved to {vh_1d_distinct_plot_file}")
-
-    # Save 1D plot of the self part of the van Hove function
-    vh_1d_self_plot_file = os.path.join(output_dir, f"van_hove_self_{temperatures[i]}K.png")
-    van_hove.get_1d_plot(mode='self', times=[0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0])
-    plt.savefig(vh_1d_self_plot_file)
-    plt.close()
-    print(f"Van Hove self plot for {temperatures[i]}K saved to {vh_1d_self_plot_file}")
-
-    # Save 3D plot of the distinct part of the van Hove function
-    vh_3d_distinct_plot_file = os.path.join(output_dir, f"van_hove_3d_distinct_{temperatures[i]}K.png")
-    van_hove.get_3d_plot(mode='distinct')
-    plt.savefig(vh_3d_distinct_plot_file)
-    plt.close()
-    print(f"Van Hove 3D distinct plot for {temperatures[i]}K saved to {vh_3d_distinct_plot_file}")
-
-    # Save 3D plot of the self part of the van Hove function
-    vh_3d_self_plot_file = os.path.join(output_dir, f"van_hove_3d_self_{temperatures[i]}K.png")
-    van_hove.get_3d_plot(mode='self')
-    plt.savefig(vh_3d_self_plot_file)
-    plt.close()
-    print(f"Van Hove 3D self plot for {temperatures[i]}K saved to {vh_3d_self_plot_file}")
+    
