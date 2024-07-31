@@ -1,6 +1,6 @@
 # Ionic Conductivity and Diffusion Analysis
 
-This repository contains a Python script for analyzing the diffusion properties and ionic conductivity of materials using molecular dynamics simulation data. The script utilizes the `pymatgen` library to perform various analyses, including diffusivity calculations and probability density analysis. Additionally, it generates plots and summary tables to visualize and document the results. Script accepts .extxyz files by default but can be modified for other formats if they are recognized by `pymatgen` and `ase`. Please refer to the links below for further information about calculations:
+This repository contains a Python script for analyzing the diffusion properties and ionic conductivity of materials using molecular dynamics simulation data. The script utilizes the `pymatgen` library to perform various analyses, including diffusivity calculations, probability density analysis, RDF analysis and Van Hove analysis. Additionally, it generates plots and summary tables to visualize and document the results. Script accepts XDATCAR and .extxyz files by default but can be modified for other formats if they are recognized by `pymatgen` and `ase`. Please refer to the links below for further information about calculations:
 
 https://materialsvirtuallab.github.io/pymatgen-analysis-diffusion/pymatgen.analysis.diffusion.analyzer.html#pymatgen.analysis.diffusion.analyzer.DiffusionAnalyzer
 
@@ -14,6 +14,8 @@ https://github.com/materialsproject/pymatgen
 - **Diffusivity Calculation**: Computes the diffusivity of ions from molecular dynamics trajectories using the `DiffusionAnalyzer` from `pymatgen`. 
 - **Ionic Conductivity Calculation**: Calculates the ionic conductivity from the diffusivity data.
 - **Probability Density Analysis**: Analyzes the probability density of ion positions over time to visualize ion pathways.
+- **Van Hove Analysis**:
+- **Radial Distribution Function Analysis**:
 - **Arrhenius Plot**: Fits the diffusivity data to an Arrhenius equation to extract activation energy and pre-exponential factor.
 - **Plotting and Exporting Data**: Generates and saves plots for diffusivity, conductivity and mean squared displacement (MSD). Exports MSD data to CSV files.
 - **Summarization**: Creates a summary table of key properties and writes it to an output text file.
@@ -61,6 +63,7 @@ https://github.com/materialsproject/pymatgen
    steps_to_ignore = 15000
    avg_nsteps = 1000
    step_skip = 100
+   ...
 4. **Modify results directory**:
    ```bash
    job_id = os.environ.get('SLURM_JOB_ID')
@@ -79,6 +82,8 @@ https://github.com/materialsproject/pymatgen
   - `diffusivity_plot_analyzer.png`
   - `conductivity_plot_analyzer.png`
   - MSD plots for each temperature (e.g., `msd_plot_800K.png`)
+  - Self and distinct Van Hove plots 
+  - Radial distribution function plots
   - Arrhenius plot (`arrhenius_plot.png`)
 - **Probability Density Analysis Output Files**: (e.g., `CHGCAR_800K.vasp`)
 - **Example output files can be find in the example_output folder**
